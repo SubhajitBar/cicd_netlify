@@ -1,30 +1,52 @@
 # This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
 
-name: Deploy website
+name: NodeJS CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-  build-and-deploy:
-
+  test:
+    name: Test
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
         node-version: [20.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - name: Install Netlify
-      run: npm install netlify-cli@17.10.1 -g
-    - name: Install Dependencies
-      run: npm ci
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install Dependencies, build and test
+        run: |
+          npm ci
+          npm run
+          npm test
+
+      - run: |
+          cd ./config
+          touch config.env
+          echo "${{ secrets.PROD }}" > config.env
+
+  deploy:
+    name: Deploy
+    needs: [test] #Our test must pass in order to run deploy job
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to production
+        # Only run this step if the branch is main
+        if: github.ref == 'refs/heads/main'
+        env:
+          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl "$deploy_url"

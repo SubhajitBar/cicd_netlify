@@ -26,16 +26,19 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
 
-      - name: Install Dependencies, build and test
-        run: |
-          npm ci
-          npm run
-          npm test
+      - name: Install Dependencies
+        run: npm ci
 
       - run: |
           cd ./config
           touch config.env
           echo "${{ secrets.PROD }}" > config.env
+
+      - name: Build and Testing...
+        run: |
+          npm run
+          npm test
+
 
   deploy:
     name: Deploy
